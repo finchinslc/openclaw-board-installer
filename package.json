@@ -1,6 +1,6 @@
 {
   "name": "openclaw-board-installer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TUI installer for OpenClaw Board",
   "type": "module",
   "bin": {
@@ -11,7 +11,12 @@
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["openclaw", "kanban", "ai", "installer"],
+  "keywords": [
+    "openclaw",
+    "kanban",
+    "ai",
+    "installer"
+  ],
   "author": "finchinslc",
   "license": "MIT",
   "repository": {

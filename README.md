@@ -1,69 +1,85 @@
 # OpenClaw Board Installer
 
-A terminal UI installer for [OpenClaw Board](https://github.com/finchinslc/openclaw-board).
+A terminal UI installer for [OpenClaw Board](https://github.com/finchinslc/openclaw-board) — a kanban board for human-AI collaboration.
 
-## Prerequisites
-
-- **Node.js** (v18+) with npm
-- **OpenClaw** installed (`npm install -g openclaw`)
-- **Homebrew** (macOS, for PostgreSQL installation)
-
-## Quick Install
+## Quick Start
 
 ```bash
 npx openclaw-board-installer
 ```
 
-Or install globally:
+This will:
+1. Check prerequisites (Node.js, PostgreSQL)
+2. Install PostgreSQL via Homebrew if needed (macOS)
+3. Clone and configure the board
+4. Set up auto-start on boot (optional)
+
+## Managing the Board
+
+After installation, use these commands:
 
 ```bash
-npm install -g openclaw-board-installer
-openclaw-board
+npx openclaw-board-installer status   # Check if running
+npx openclaw-board-installer start    # Start the board
+npx openclaw-board-installer stop     # Stop the board
+npx openclaw-board-installer restart  # Restart
+npx openclaw-board-installer logs     # View recent logs
+npx openclaw-board-installer open     # Open in browser
+npx openclaw-board-installer update   # Pull latest & restart
 ```
 
-## What it does
+## Alternative: Docker
 
-1. **Checks prerequisites** — Node.js, OpenClaw, Homebrew
-2. **Installs PostgreSQL** via Homebrew (if not present)
-3. **Creates database** for OpenClaw Board
-4. **Clones and configures** the board
-5. **Sets up auto-start** via launchd (optional)
-
-## Configuration
-
-The installer prompts for:
-
-- **Installation directory** (default: `~/openclaw-board`)
-- **Port** (default: 3000)
-- **Auto-start on boot** (macOS only)
-
-## Manual Setup
-
-If you prefer manual installation:
+If you prefer containerized deployment:
 
 ```bash
-# Install PostgreSQL
-brew install postgresql@17
-brew services start postgresql@17
-
-# Clone the repo
 git clone https://github.com/finchinslc/openclaw-board.git
 cd openclaw-board
-
-# Install dependencies
-npm install
-
-# Configure
-echo 'DATABASE_URL="postgresql://$(whoami)@localhost:5432/openclaw_board?schema=public"' > .env
-
-# Setup database
-createdb openclaw_board
-npx prisma generate
-npx prisma db push
-
-# Run
-npm run dev
+docker compose up -d
 ```
+
+Open http://localhost:3000
+
+## What Gets Installed
+
+| Component | Location |
+|-----------|----------|
+| App | `~/openclaw-board` |
+| Database | PostgreSQL (local) |
+| Config | `~/openclaw-board/.env` |
+| Logs | `~/openclaw-board/logs/` |
+| Auto-start | `~/Library/LaunchAgents/com.openclaw.board.plist` |
+
+## Updating
+
+```bash
+npx openclaw-board-installer update
+```
+
+Or run the installer again — it detects existing installations and offers an update option.
+
+## Uninstalling
+
+```bash
+# Stop the service
+npx openclaw-board-installer stop
+
+# Remove auto-start (macOS)
+launchctl unload ~/Library/LaunchAgents/com.openclaw.board.plist
+rm ~/Library/LaunchAgents/com.openclaw.board.plist
+
+# Remove the app
+rm -rf ~/openclaw-board
+
+# Optionally remove the database
+dropdb openclaw_board
+```
+
+## Requirements
+
+- **Node.js** 18+
+- **PostgreSQL** (installer can set this up on macOS)
+- **macOS** or **Linux** (Windows not yet supported)
 
 ## License
 
