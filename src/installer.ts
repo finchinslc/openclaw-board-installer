@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts'
 import pc from 'picocolors'
 import { execSync, spawn } from 'child_process'
-import { existsSync, writeFileSync, mkdirSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 
@@ -13,6 +13,12 @@ interface InstallerConfig {
   installDir: string
   port: number
   autoStart: boolean
+}
+
+interface ExistingInstall {
+  installDir: string
+  port: number
+  hasLaunchAgent: boolean
 }
 
 function commandExists(cmd: string): boolean {
@@ -37,6 +43,34 @@ function runCommandLive(cmd: string, args: string[], cwd?: string): Promise<void
     })
     proc.on('error', reject)
   })
+}
+
+function detectExistingInstall(): ExistingInstall | null {
+  const installDir = DEFAULT_INSTALL_DIR
+  const envPath = join(installDir, '.env')
+  const plistPath = join(homedir(), 'Library', 'LaunchAgents', 'com.openclaw.board.plist')
+  
+  if (!existsSync(installDir) || !existsSync(envPath)) {
+    return null
+  }
+  
+  // Parse port from .env
+  let port = DEFAULT_PORT
+  try {
+    const envContent = readFileSync(envPath, 'utf-8')
+    const portMatch = envContent.match(/PORT=(\d+)/)
+    if (portMatch) {
+      port = parseInt(portMatch[1], 10)
+    }
+  } catch {
+    // Use default
+  }
+  
+  return {
+    installDir,
+    port,
+    hasLaunchAgent: existsSync(plistPath),
+  }
 }
 
 async function checkPrerequisites(): Promise<{ ok: boolean; missing: string[] }> {
@@ -83,13 +117,14 @@ async function setupDatabase(spinner: ReturnType<typeof p.spinner>): Promise<str
   const dbName = 'openclaw_board'
   const user = process.env.USER || 'openclaw'
   
-  spinner.message('Creating database...')
+  spinner.message('Checking database...')
   
   try {
     // Check if database exists
     runCommand(`psql -lqt | cut -d \\| -f 1 | grep -qw ${dbName}`)
   } catch {
     // Database doesn't exist, create it
+    spinner.message('Creating database...')
     try {
       runCommand(`createdb ${dbName}`)
     } catch {
@@ -101,16 +136,45 @@ async function setupDatabase(spinner: ReturnType<typeof p.spinner>): Promise<str
   return `postgresql://${user}@localhost:5432/${dbName}?schema=public`
 }
 
+async function runUpdate(existing: ExistingInstall): Promise<void> {
+  const spinner = p.spinner()
+  
+  try {
+    spinner.start('Pulling latest changes...')
+    await runCommandLive('git', ['pull', 'origin', 'main'], existing.installDir)
+    spinner.stop('Code updated')
+    
+    spinner.start('Installing dependencies...')
+    await runCommandLive('npm', ['install'], existing.installDir)
+    spinner.stop('Dependencies installed')
+    
+    spinner.start('Running database migrations...')
+    await runCommandLive('npx', ['prisma', 'generate'], existing.installDir)
+    await runCommandLive('npx', ['prisma', 'db', 'push'], existing.installDir)
+    spinner.stop('Database updated')
+    
+    p.log.success(pc.green('Update complete!'))
+    p.log.info('')
+    p.log.info(`Board running at: ${pc.cyan(`http://localhost:${existing.port}`)}`)
+    
+    if (existing.hasLaunchAgent) {
+      p.log.info(pc.dim('Restart the service to apply changes:'))
+      p.log.info(`  ${pc.cyan('launchctl kickstart -k gui/$(id -u)/com.openclaw.board')}`)
+    }
+    
+    p.outro(pc.green('✓ OpenClaw Board updated'))
+    
+  } catch (err) {
+    spinner.stop('Update failed')
+    throw err
+  }
+}
+
 async function cloneAndSetup(config: InstallerConfig, spinner: ReturnType<typeof p.spinner>): Promise<void> {
   const { installDir, port } = config
   
-  if (existsSync(installDir)) {
-    spinner.message('Directory exists, pulling latest...')
-    await runCommandLive('git', ['pull', 'origin', 'main'], installDir)
-  } else {
-    spinner.message('Cloning OpenClaw Board...')
-    await runCommandLive('git', ['clone', REPO_URL, installDir])
-  }
+  spinner.message('Cloning OpenClaw Board...')
+  await runCommandLive('git', ['clone', REPO_URL, installDir])
   
   spinner.message('Installing dependencies...')
   await runCommandLive('npm', ['install'], installDir)
@@ -191,6 +255,53 @@ export async function runInstaller(): Promise<void> {
   
   p.intro(pc.cyan(pc.bold('OpenClaw Board Installer')))
   
+  // Check for existing installation first
+  const existing = detectExistingInstall()
+  
+  if (existing) {
+    p.log.info(pc.green('✓ Existing installation detected'))
+    p.log.info(`  Directory: ${pc.cyan(existing.installDir)}`)
+    p.log.info(`  Port: ${pc.cyan(String(existing.port))}`)
+    p.log.info(`  Auto-start: ${pc.cyan(existing.hasLaunchAgent ? 'Yes' : 'No')}`)
+    p.log.info('')
+    
+    const action = await p.select({
+      message: 'What would you like to do?',
+      options: [
+        { value: 'update', label: 'Update', hint: 'Pull latest code and run migrations' },
+        { value: 'fresh', label: 'Fresh Install', hint: 'Remove and reinstall from scratch' },
+        { value: 'cancel', label: 'Cancel' },
+      ],
+    })
+    
+    if (p.isCancel(action) || action === 'cancel') {
+      p.outro(pc.yellow('Cancelled.'))
+      process.exit(0)
+    }
+    
+    if (action === 'update') {
+      await runUpdate(existing)
+      process.exit(0)
+    }
+    
+    // Fresh install - confirm deletion
+    const confirmDelete = await p.confirm({
+      message: `This will delete ${existing.installDir}. Continue?`,
+      initialValue: false,
+    })
+    
+    if (p.isCancel(confirmDelete) || !confirmDelete) {
+      p.outro(pc.yellow('Cancelled.'))
+      process.exit(0)
+    }
+    
+    // Remove existing
+    const rmSpinner = p.spinner()
+    rmSpinner.start('Removing existing installation...')
+    await runCommandLive('rm', ['-rf', existing.installDir])
+    rmSpinner.stop('Removed')
+  }
+  
   // Check prerequisites
   const prereqSpinner = p.spinner()
   prereqSpinner.start('Checking prerequisites...')
@@ -253,6 +364,7 @@ export async function runInstaller(): Promise<void> {
     initialValue: DEFAULT_INSTALL_DIR,
     validate: (value) => {
       if (!value) return 'Directory is required'
+      if (existsSync(value)) return 'Directory already exists'
       return undefined
     },
   })
