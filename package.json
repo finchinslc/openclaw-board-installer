@@ -1,0 +1,33 @@
+{
+  "name": "openclaw-board-installer",
+  "version": "0.1.0",
+  "description": "TUI installer for OpenClaw Board",
+  "type": "module",
+  "bin": {
+    "openclaw-board": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["openclaw", "kanban", "ai", "installer"],
+  "author": "finchinslc",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/finchinslc/openclaw-board-installer.git"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.10.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
