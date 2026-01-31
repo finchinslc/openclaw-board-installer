@@ -1,5 +1,7 @@
 # OpenClaw Board Installer
 
+[![npm downloads](https://img.shields.io/npm/dm/openclaw-board-installer.svg)](https://www.npmjs.com/package/openclaw-board-installer)
+
 A terminal UI installer for [OpenClaw Board](https://github.com/finchinslc/openclaw-board) — a kanban board for human-AI collaboration.
 
 ## Quick Start
@@ -27,18 +29,6 @@ npx openclaw-board-installer logs     # View recent logs
 npx openclaw-board-installer open     # Open in browser
 npx openclaw-board-installer update   # Pull latest & restart
 ```
-
-## Alternative: Docker
-
-If you prefer containerized deployment:
-
-```bash
-git clone https://github.com/finchinslc/openclaw-board.git
-cd openclaw-board
-docker compose up -d
-```
-
-Open http://localhost:3000
 
 ## What Gets Installed
 
