@@ -14,7 +14,8 @@ This will:
 1. Check prerequisites (Node.js, PostgreSQL)
 2. Install PostgreSQL via Homebrew if needed (macOS)
 3. Clone and configure the board
-4. Set up auto-start on boot (optional)
+4. Install the `ocb` CLI globally
+5. Set up auto-start on boot (optional)
 
 ## Managing the Board
 
@@ -35,10 +36,28 @@ npx openclaw-board-installer update   # Pull latest & restart
 | Component | Location |
 |-----------|----------|
 | App | `~/openclaw-board` |
+| CLI | `ocb` (globally linked) |
 | Database | PostgreSQL (local) |
 | Config | `~/openclaw-board/.env` |
 | Logs | `~/openclaw-board/logs/` |
 | Auto-start | `~/Library/LaunchAgents/com.openclaw.board.plist` |
+
+## CLI
+
+The installer sets up the `ocb` command globally:
+
+```bash
+ocb list              # List all tasks
+ocb todo              # Show TODOs
+ocb show OCB-42       # Task details
+ocb create "Task"     # Create task
+ocb start 42          # Start working
+ocb done 42           # Mark complete
+ocb pick              # Grab next TODO
+ocb active            # Show current task
+```
+
+See [CLI documentation](https://github.com/finchinslc/openclaw-board/tree/main/cli) for all commands.
 
 ## Updating
 
