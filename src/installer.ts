@@ -153,6 +153,15 @@ async function runUpdate(existing: ExistingInstall): Promise<void> {
     await runCommandLive('npx', ['prisma', 'db', 'push'], existing.installDir)
     spinner.stop('Database updated')
     
+    // Update CLI
+    const cliDir = join(existing.installDir, 'cli')
+    if (existsSync(cliDir)) {
+      spinner.start('Updating ocb CLI...')
+      await runCommandLive('npm', ['install'], cliDir)
+      await runCommandLive('npm', ['link'], cliDir)
+      spinner.stop('CLI updated')
+    }
+    
     p.log.success(pc.green('Update complete!'))
     p.log.info('')
     p.log.info(`Board running at: ${pc.cyan(`http://localhost:${existing.port}`)}`)
@@ -191,6 +200,14 @@ async function cloneAndSetup(config: InstallerConfig, spinner: ReturnType<typeof
   spinner.message('Setting up database schema...')
   await runCommandLive('npx', ['prisma', 'generate'], installDir)
   await runCommandLive('npx', ['prisma', 'db', 'push'], installDir)
+  
+  // Install CLI globally
+  spinner.message('Installing ocb CLI...')
+  const cliDir = join(installDir, 'cli')
+  if (existsSync(cliDir)) {
+    await runCommandLive('npm', ['install'], cliDir)
+    await runCommandLive('npm', ['link'], cliDir)
+  }
 }
 
 async function setupLaunchAgent(config: InstallerConfig, spinner: ReturnType<typeof p.spinner>): Promise<void> {
@@ -448,6 +465,11 @@ export async function runInstaller(): Promise<void> {
     p.log.info(`  ${pc.cyan('npm start')}    ${pc.dim('# Production mode')}`)
     p.log.info('')
     p.log.info(`Open in browser: ${pc.cyan(`http://localhost:${config.port}`)}`)
+    p.log.info('')
+    p.log.info(pc.bold('CLI installed:'))
+    p.log.info(`  ${pc.cyan('ocb list')}     ${pc.dim('# List tasks')}`)
+    p.log.info(`  ${pc.cyan('ocb todo')}     ${pc.dim('# Show TODOs')}`)
+    p.log.info(`  ${pc.cyan('ocb --help')}   ${pc.dim('# All commands')}`)
     
     p.outro(pc.green('Happy tasking! 🎯'))
     
