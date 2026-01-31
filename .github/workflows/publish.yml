@@ -21,3 +21,5 @@ jobs:
       - run: npm ci
       
       - run: npm publish --provenance --access public
+        env:
+          NPM_CONFIG_PROVENANCE: true

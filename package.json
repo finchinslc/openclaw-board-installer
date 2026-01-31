@@ -1,6 +1,6 @@
 {
   "name": "openclaw-board-installer",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "TUI installer for OpenClaw Board",
   "type": "module",
   "bin": {
